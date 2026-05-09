@@ -219,7 +219,6 @@ CREATE ROLE rol_soporte;
 CREATE ROLE rol_consulta;
 GO
 
-
 -- 4. ASIGNAR PERMISOS
 
 -- ADMINISTRADOR
