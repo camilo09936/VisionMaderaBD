@@ -208,8 +208,6 @@ DEFAULT_DATABASE = VisionMadera;
 GO
 
 
--- 2. USAR BASE DE DATOS
-
 USE VisionMadera;
 GO
 
