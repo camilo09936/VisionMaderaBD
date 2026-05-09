@@ -24,19 +24,7 @@ CREATE TABLE ESTADO_PAGO(
 INSERT INTO ESTADO_PAGO (nombre) VALUES
 ('Pendiente'),('Aprobado'),('Fallido');
 
-CREATE TABLE TIPO_PQRS(
-	id_tipo_pqrs INT PRIMARY KEY IDENTITY(1,1),
-	nombre VARCHAR(50) NOT NULL UNIQUE
-);
-INSERT INTO TIPO_PQRS (nombre) VALUES
-('Peticion'),('Queja'),('Reclamo'),('Sugerencia');
-
-CREATE TABLE ESTADO_PQRS (
-	id_estado_pqrs INT PRIMARY KEY IDENTITY(1,1),
-	nombre VARCHAR(50) NOT NULL UNIQUE
-);
-INSERT INTO ESTADO_PQRS (nombre) VALUES
-('Abierto'),('En Proceso'),('Cerrado');
+ 
 
 CREATE TABLE USUARIO(
 	id_usuario INT PRIMARY KEY IDENTITY(1,1),
@@ -46,14 +34,15 @@ CREATE TABLE USUARIO(
 	contrasena VARCHAR(255) NOT NULL,
 	telefono VARCHAR(20),
 	cedula VARCHAR (20) NOT NULL UNIQUE,
-	fecha_nacimiento DATE NOT NULL,
+	fecha_nacimiento DATE NOT NULL
 	);
+
 
 CREATE TABLE SEDE (
 	id_sede INT PRIMARY KEY IDENTITY(1,1),
 	nombre VARCHAR(100) NOT NULL,
 	direccion VARCHAR(200) NOT NULL,
-	telefono VARCHAR(100) NOT NULL,
+	telefono VARCHAR(100) NOT NULL
 	);
 
 CREATE TABLE DISENADOR (
@@ -62,7 +51,7 @@ CREATE TABLE DISENADOR (
 	apellido VARCHAR(100) NOT NULL,
 	correo VARCHAR(100) NOT NULL UNIQUE,
 	id_sede INT NOT NULL,
-	CONSTRAINT FK_disenador_sede FOREIGN KEY (id_sede) REFERENCES SEDE(id_sede),
+	CONSTRAINT FK_disenador_sede FOREIGN KEY (id_sede) REFERENCES SEDE(id_sede)
 );
 
 CREATE TABLE CITA (
@@ -81,7 +70,7 @@ CREATE TABLE CITA (
 
 CREATE TABLE PAGO (
 	id_pago INT IDENTITY(1,1) PRIMARY KEY,
-	monto DECIMAL(10, 2) NOT NULL,
+	monto DECIMAL (10, 2) NOT NULL,
 	id_metodo_pago INT NOT NULL,
 	id_estado_pago INT NOT NULL DEFAULT 1,
 	fecha_pago DATETIME DEFAULT GETDATE(),
@@ -111,6 +100,7 @@ CREATE TABLE PQRS (
 	CONSTRAINT FK_pqrs_estado FOREIGN KEY (id_estado_pqrs) REFERENCES ESTADO_PQRS(id_estado_pqrs),
 	CONSTRAINT FK_pqrs_usuario FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario)
 );
+
 
 SET IDENTITY_INSERT SEDE ON;
 SET IDENTITY_INSERT USUARIO ON;
@@ -183,6 +173,113 @@ WITH (
   ROWTERMINATOR = '\n'
 );
 
+--LOGINS--
+ USE master;
+GO
+
+-- 1. CREAR LOGINS
+
+CREATE LOGIN admin_vm
+WITH PASSWORD = 'Admin123!',
+CHECK_POLICY = ON,
+CHECK_EXPIRATION = ON,
+DEFAULT_DATABASE = VisionMadera;
+GO
+
+CREATE LOGIN disenador_vm
+WITH PASSWORD = 'Disenador123!',
+CHECK_POLICY = ON,
+CHECK_EXPIRATION = ON,
+DEFAULT_DATABASE = VisionMadera;
+GO
+
+CREATE LOGIN soporte_vm
+WITH PASSWORD = 'Soporte123!',
+CHECK_POLICY = ON,
+CHECK_EXPIRATION = ON,
+DEFAULT_DATABASE = VisionMadera;
+GO
+
+CREATE LOGIN consulta_vm
+WITH PASSWORD = 'Consulta123!',
+CHECK_POLICY = ON,
+CHECK_EXPIRATION = ON,
+DEFAULT_DATABASE = VisionMadera;
+GO
+
+
+-- 2. USAR BASE DE DATOS
+
+USE VisionMadera;
+GO
+
+-- 3. CREAR ROLES
+
+CREATE ROLE rol_admin;
+CREATE ROLE rol_disenador;
+CREATE ROLE rol_soporte;
+CREATE ROLE rol_consulta;
+GO
+
+
+-- 4. ASIGNAR PERMISOS
+
+-- ADMINISTRADOR
+GRANT CONTROL ON DATABASE::VisionMadera TO rol_admin;
+
+-- DISEÑADOR
+GRANT SELECT ON dbo.CITA TO rol_disenador;
+GRANT SELECT ON dbo.USUARIO TO rol_disenador;
+GRANT INSERT, UPDATE ON dbo.CALIFICACION TO rol_disenador;
+
+-- SOPORTE / PQRS
+GRANT SELECT, INSERT, UPDATE ON dbo.PQRS TO rol_soporte;
+GRANT SELECT ON dbo.USUARIO TO rol_soporte;
+
+-- CONSULTA / REPORTES
+GRANT SELECT ON SCHEMA::dbo TO rol_consulta;
+
+GO
+
+-- 5. CREAR USERS
+
+CREATE USER admin_vm FOR LOGIN admin_vm;
+CREATE USER disenador_vm FOR LOGIN disenador_vm;
+CREATE USER soporte_vm FOR LOGIN soporte_vm;
+CREATE USER consulta_vm FOR LOGIN consulta_vm;
+GO
+
+
+-- 6. ASIGNAR ROLES
+
+ALTER ROLE rol_admin ADD MEMBER admin_vm;
+
+ALTER ROLE rol_disenador ADD MEMBER disenador_vm;
+
+ALTER ROLE rol_soporte ADD MEMBER soporte_vm;
+
+ALTER ROLE rol_consulta ADD MEMBER consulta_vm;
+
+GO
+
+
+-- 7. VERIFICAR
+
+SELECT
+    l.name AS login,
+    u.name AS usuario,
+    r.name AS rol
+FROM sys.server_principals l
+JOIN sys.database_principals u
+    ON l.sid = u.sid
+JOIN sys.database_role_members rm
+    ON u.principal_id = rm.member_principal_id
+JOIN sys.database_principals r
+    ON rm.role_principal_id = r.principal_id
+ORDER BY l.name;
+
+GO
+ 
 --PROCEDIMIENTO #1 (Registrar Pago de Cita): 
 CREATE PROCEDURE sp_RegistrarPagoCita
 	@id_cita INT,
