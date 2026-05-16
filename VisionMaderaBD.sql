@@ -24,7 +24,19 @@ CREATE TABLE ESTADO_PAGO(
 INSERT INTO ESTADO_PAGO (nombre) VALUES
 ('Pendiente'),('Aprobado'),('Fallido');
 
- 
+CREATE TABLE TIPO_PQRS(
+	id_tipo_pqrs INT PRIMARY KEY IDENTITY(1,1),
+	nombre VARCHAR(50) NOT NULL UNIQUE
+);
+INSERT INTO TIPO_PQRS (nombre) VALUES
+('Peticion'),('Queja'),('Reclamo'),('Sugerencia');
+
+CREATE TABLE ESTADO_PQRS (
+	id_estado_pqrs INT PRIMARY KEY IDENTITY(1,1),
+	nombre VARCHAR(50) NOT NULL UNIQUE
+);
+INSERT INTO ESTADO_PQRS (nombre) VALUES
+('Abierto'),('En Proceso'),('Cerrado');
 
 CREATE TABLE USUARIO(
 	id_usuario INT PRIMARY KEY IDENTITY(1,1),
@@ -117,7 +129,8 @@ FROM '/var/opt/mssql/bulkdata/SEDE.csv'
 WITH (
   FIRSTROW = 2,
   FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '\n'
+  ROWTERMINATOR = '0x0a',
+  KEEPIDENTITY
 );
 -- 2. USUARIO
 BULK INSERT USUARIO 
@@ -227,7 +240,7 @@ GRANT CONTROL ON DATABASE::VisionMadera TO rol_admin;
 -- DISEÑADOR
 GRANT SELECT ON dbo.CITA TO rol_disenador;
 GRANT SELECT ON dbo.USUARIO TO rol_disenador;
-GRANT INSERT, UPDATE ON dbo.CALIFICACION TO rol_disenador;
+GRANT SELECT ON dbo.CALIFICACION TO rol_disenador;
 
 -- SOPORTE / PQRS
 GRANT SELECT, INSERT, UPDATE ON dbo.PQRS TO rol_soporte;
@@ -554,3 +567,21 @@ BEGIN
 	END CATCH
 END;
 --EJEMPLO DE USO--El usuario debe existir, valida que exista y actualiza.
+
+EXEC sp_RegistrarPagoCita @id_cita = 1, @monto_base = 100000.00, @id_metodo_pago = 1;
+
+EXEC sp_CalcularComisionDisenadores;
+
+EXEC sp_RegistrarCalificacionCita @id_cita = 2, @puntaje = 5, @comentario = 'Excelente servicio y diseño.';
+
+EXEC sp_RegistrarPQRS @id_usuario = 1, @tipo_nombre = 'Reclamo', @descripcion = 'El pedido llegó tarde.';
+
+EXEC sp_ListarPQRSUsuarios;
+
+EXEC sp_ReagendarCita @id_cita = 3, @nueva_fecha = '2026-06-15', @nueva_hora = '14:30:00';
+
+EXEC sp_ReporteCitasSedes;
+
+EXEC sp_ActualizarContactoUsuario @id_usuario = 1, @nuevo_telefono = '3005551234', @nuevo_correo = 'nuevo_email@correo.com';
+
+SELECT id_usuario, nombre, telefono, correo FROM USUARIO WHERE id_usuario = 1;
