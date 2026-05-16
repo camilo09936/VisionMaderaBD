@@ -193,81 +193,57 @@ CREATE TABLE PQRS (
 	CONSTRAINT FK_pqrs_estado FOREIGN KEY (id_estado_pqrs) REFERENCES ESTADO_PQRS(id_estado_pqrs),
 	CONSTRAINT FK_pqrs_usuario FOREIGN KEY (documento) REFERENCES USUARIO(documento)
 );
-CREATE PROCEDURE sp_agendar_cita
-(
+
+CREATE PROCEDURE sp_AgendarCita
     @fecha DATE,
     @id_bloque INT,
+    @id_estado_cita INT,
     @documento VARCHAR(20),
     @id_sede INT,
     @id_disenador INT
-)
 AS
 BEGIN
-    DECLARE @dia VARCHAR(20);
-    SET @dia = DATENAME(WEEKDAY, @fecha);
+    SET NOCOUNT ON;
 
-    -- VALIDAR USUARIO
-
-    IF NOT EXISTS (
-        SELECT 1
-        FROM USUARIO
-        WHERE documento = @documento
-    )
-    BEGIN
-        PRINT 'El usuario no existe';
-        RETURN;
-    END
-
-    -- VALIDAR SI EL DISEÑADOR TRABAJA ESE BLOQUE
-
-    IF NOT EXISTS (
-        SELECT 1
-        FROM AGENDA_DISENADOR
-        WHERE id_disenador = @id_disenador
-        AND dia_semana = @dia
-        AND id_bloque = @id_bloque
-    )
-    BEGIN
-        PRINT 'El diseñador no trabaja en ese bloque';
-        RETURN;
-    END
-
-    -- VALIDAR SI EL BLOQUE YA ESTÁ OCUPADO
-
+    -- 1. VALIDACIÓN: El cliente ya tiene una cita en ese mismo bloque y fecha?
     IF EXISTS (
-        SELECT 1
-        FROM CITA
-        WHERE fecha = @fecha
-        AND id_bloque = @id_bloque
-        AND id_disenador = @id_disenador
-        AND id_estado_cita <> 4
+        SELECT 1 FROM CITA 
+        WHERE fecha = @fecha 
+          AND id_bloque = @id_bloque 
+          AND documento = @documento
     )
     BEGIN
-        PRINT 'Ese bloque ya está ocupado';
+        RAISERROR ('Error: Ya tienes otra cita agendada en este mismo día y bloque horario.', 16, 1);
         RETURN;
     END
 
-    -- INSERTAR CITA
-
-    INSERT INTO CITA
-    (
-        fecha,
-        id_bloque,
-        documento,
-        id_sede,
-        id_disenador
+    -- 2. VALIDACIÓN CRÍTICA: El diseñador ya está ocupado en ese bloque y fecha?
+    IF EXISTS (
+        SELECT 1 FROM CITA 
+        WHERE fecha = @fecha 
+          AND id_bloque = @id_bloque 
+          AND id_disenador = @id_disenador
     )
-    VALUES
-    (
-        @fecha,
-        @id_bloque,
-        @documento,
-        @id_sede,
-        @id_disenador
-    );
+    BEGIN
+        -- El estado de severidad 16 fuerza a Node.js / Sequelize a capturarlo en el catch
+        RAISERROR ('Error: El diseñador seleccionado ya se encuentra asignado a otra cita en este bloque horario.', 16, 1);
+        RETURN;
+    END
 
-    PRINT 'Cita agendada correctamente';
+    -- 3. INSERCIÓN: Si pasa las validaciones anteriores, se registra la cita con éxito
+    BEGIN TRY
+        INSERT INTO CITA (fecha, id_bloque, id_estado_cita, documento, id_sede, id_disenador)
+        VALUES (@fecha, @id_bloque, @id_estado_cita, @documento, @id_sede, @id_disenador);
+        
+        PRINT 'Cita agendada exitosamente en el sistema.';
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
 
+        RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
 END;
 GO
 
@@ -279,3 +255,5 @@ EXEC sp_agendar_cita
     @id_sede = 1,
     @id_disenador = 1;
 
+SELECT * FROM CITA; 
+SELECT * FROM USUARIO;
