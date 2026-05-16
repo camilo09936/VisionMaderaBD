@@ -24,19 +24,7 @@ CREATE TABLE ESTADO_PAGO(
 INSERT INTO ESTADO_PAGO (nombre) VALUES
 ('Pendiente'),('Aprobado'),('Fallido');
 
-CREATE TABLE TIPO_PQRS(
-	id_tipo_pqrs INT PRIMARY KEY IDENTITY(1,1),
-	nombre VARCHAR(50) NOT NULL UNIQUE
-);
-INSERT INTO TIPO_PQRS (nombre) VALUES
-('Peticion'),('Queja'),('Reclamo'),('Sugerencia');
-
-CREATE TABLE ESTADO_PQRS (
-	id_estado_pqrs INT PRIMARY KEY IDENTITY(1,1),
-	nombre VARCHAR(50) NOT NULL UNIQUE
-);
-INSERT INTO ESTADO_PQRS (nombre) VALUES
-('Abierto'),('En Proceso'),('Cerrado');
+ 
 
 CREATE TABLE USUARIO(
 	id_usuario INT PRIMARY KEY IDENTITY(1,1),
@@ -48,6 +36,18 @@ CREATE TABLE USUARIO(
 	cedula VARCHAR (20) NOT NULL UNIQUE,
 	fecha_nacimiento DATE NOT NULL
 	);
+INSERT INTO USUARIO
+(nombre, apellido, correo, contrasena, telefono, id_rol) VALUES
+('Juan', 'Perez', 'juan@gmail.com', '123', '3001111111', 1),
+('Ana', 'Gomez', 'ana@gmail.com', '123', '3002222222', 2),
+('Carlos', 'Lopez', 'carlos@gmail.com', '123', '3003333333', 3),
+('Maria', 'Rodriguez', 'maria@gmail.com', '123', '3004444444', 2),
+('Pedro', 'Martinez', 'pedro@gmail.com', '123', '3005555555', 3),
+('Luisa', 'Fernandez', 'luisa@gmail.com', '123', '3006666666', 4),
+('Jorge', 'Ramirez', 'jorge@gmail.com', '123', '3007777777', 5),
+('Camila', 'Torres', 'camila@gmail.com', '123', '3008888888', 6),
+('Andres', 'Moreno', 'andres@gmail.com', '123', '3009999999', 7),
+('Sofia', 'Diaz', 'sofia@gmail.com', '123', '3010000000', 8);
 
 
 CREATE TABLE SEDE (
@@ -56,6 +56,14 @@ CREATE TABLE SEDE (
 	direccion VARCHAR(200) NOT NULL,
 	telefono VARCHAR(100) NOT NULL
 	);
+INSERT INTO SEDE
+(nombre_sede, direccion, telefono) VALUES
+('Sede Norte', 'Calle 10 #20-30', '6041111111'),
+('Sede Sur', 'Carrera 15 #40-20', '6042222222'),
+('Sede Centro', 'Avenida 30 #12-10', '6043333333'),
+('Sede Bello', 'Calle 45 #22-18', '6044444444'),
+('Sede Itagui', 'Carrera 50 #33-12', '6045555555'),
+('Sede Envigado', 'Calle 60 #19-11', '6046666666'),
 
 CREATE TABLE DISENADOR (
 	id_disenador INT PRIMARY KEY IDENTITY(1,1),
@@ -64,6 +72,17 @@ CREATE TABLE DISENADOR (
 	correo VARCHAR(100) NOT NULL UNIQUE,
 	id_sede INT NOT NULL,
 	CONSTRAINT FK_disenador_sede FOREIGN KEY (id_sede) REFERENCES SEDE(id_sede)
+);
+
+CREATE TABLE AGENDA_DISENADOR (
+    id_agenda INT PRIMARY KEY IDENTITY(1,1),
+    id_disenador INT NOT NULL,
+	dia_semana VARCHAR(20) NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    CONSTRAINT FK_horario_disenador
+    FOREIGN KEY (id_disenador)
+    REFERENCES DISENADOR(id_disenador)
 );
 
 CREATE TABLE CITA (
@@ -123,68 +142,7 @@ SET IDENTITY_INSERT CALIFICACION ON;
 SET IDENTITY_INSERT PQRS ON;
 GO
 
--- 1. SEDE
-BULK INSERT SEDE 
-FROM '/var/opt/mssql/bulkdata/SEDE.csv'
-WITH (
-  FIRSTROW = 2,
-  FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '0x0a',
-  KEEPIDENTITY
-);
--- 2. USUARIO
-BULK INSERT USUARIO 
-FROM '/var/opt/mssql/bulkdata/USUARIO.csv'
-WITH (
-  FIRSTROW = 2,
-  FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '\n'
-);
-
--- 3. DISENADOR
-BULK INSERT DISENADOR 
-FROM '/var/opt/mssql/bulkdata/DISENADOR.csv'
-WITH (
-  FIRSTROW = 2,
-  FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '\n'
-);
-
--- 4. CITA
-BULK INSERT CITA 
-FROM '/var/opt/mssql/bulkdata/CITA.csv'
-WITH (
-  FIRSTROW = 2,
-  FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '\n'
-);
-
--- 5. PAGO
-BULK INSERT PAGO 
-FROM '/var/opt/mssql/bulkdata/PAGO.csv'
-WITH (
-  FIRSTROW = 2,
-  FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '\n'
-);
-
--- 6. CALIFICACION
-BULK INSERT CALIFICACION 
-FROM '/var/opt/mssql/bulkdata/CALIFICACION.csv'
-WITH (
-  FIRSTROW = 2,
-  FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '\n'
-);
-
--- 7. PQRS
-BULK INSERT PQRS 
-FROM '/var/opt/mssql/bulkdata/PQRS.csv'
-WITH (
-  FIRSTROW = 2,
-  FIELDTERMINATOR = ';',
-  ROWTERMINATOR = '\n'
-);
+SELECT * FROM SEDE; 
 
 --LOGINS--
  USE master;
@@ -240,7 +198,7 @@ GRANT CONTROL ON DATABASE::VisionMadera TO rol_admin;
 -- DISEÑADOR
 GRANT SELECT ON dbo.CITA TO rol_disenador;
 GRANT SELECT ON dbo.USUARIO TO rol_disenador;
-GRANT SELECT ON dbo.CALIFICACION TO rol_disenador;
+GRANT INSERT, UPDATE ON dbo.CALIFICACION TO rol_disenador;
 
 -- SOPORTE / PQRS
 GRANT SELECT, INSERT, UPDATE ON dbo.PQRS TO rol_soporte;
@@ -540,6 +498,7 @@ END;
 --por cada sede incluso si no tiene y muestra el total en consola.
 
 --PROCEDIMIENTO #8 (Actualizar Datos de Contacto)--
+
 CREATE PROCEDURE sp_ActualizarContactoUsuario
 	@id_usuario INT,
 	@nuevo_telefono VARCHAR(20),
@@ -567,21 +526,3 @@ BEGIN
 	END CATCH
 END;
 --EJEMPLO DE USO--El usuario debe existir, valida que exista y actualiza.
-
-EXEC sp_RegistrarPagoCita @id_cita = 1, @monto_base = 100000.00, @id_metodo_pago = 1;
-
-EXEC sp_CalcularComisionDisenadores;
-
-EXEC sp_RegistrarCalificacionCita @id_cita = 2, @puntaje = 5, @comentario = 'Excelente servicio y diseño.';
-
-EXEC sp_RegistrarPQRS @id_usuario = 1, @tipo_nombre = 'Reclamo', @descripcion = 'El pedido llegó tarde.';
-
-EXEC sp_ListarPQRSUsuarios;
-
-EXEC sp_ReagendarCita @id_cita = 3, @nueva_fecha = '2026-06-15', @nueva_hora = '14:30:00';
-
-EXEC sp_ReporteCitasSedes;
-
-EXEC sp_ActualizarContactoUsuario @id_usuario = 1, @nuevo_telefono = '3005551234', @nuevo_correo = 'nuevo_email@correo.com';
-
-SELECT id_usuario, nombre, telefono, correo FROM USUARIO WHERE id_usuario = 1;

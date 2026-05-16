@@ -57,6 +57,14 @@ CREATE TABLE SEDE (
 	direccion VARCHAR(200) NOT NULL,
 	telefono VARCHAR(100) NOT NULL,
 	);
+INSERT INTO SEDE(nombre, direccion, telefono) VALUES
+('Sede Norte', 'Calle 10 #20-30', '6041111111'),
+('Sede Sur', 'Carrera 15 #40-20', '6042222222'),
+('Sede Centro', 'Avenida 30 #12-10', '6043333333'),
+('Sede Bello', 'Calle 45 #22-18', '6044444444'),
+('Sede Itagui', 'Carrera 50 #33-12', '6045555555'),
+('Sede Envigado', 'Calle 60 #19-11', '6046666666'),
+('Sede Laureles', 'Carrera 70 #44-15', '6047777777');
 
 CREATE TABLE DISENADOR (
 	id_disenador INT PRIMARY KEY IDENTITY(1,1),
@@ -66,6 +74,63 @@ CREATE TABLE DISENADOR (
 	id_sede INT NOT NULL,
 	CONSTRAINT FK_disenador_sede FOREIGN KEY (id_sede) REFERENCES SEDE(id_sede),
 );
+INSERT INTO DISENADOR(nombre, apellido, correo, id_sede) VALUES
+('Daniel', 'Ruiz', 'daniel@gmail.com', 1),
+('Laura', 'Mora', 'laura@gmail.com', 2),
+('Felipe', 'Castro', 'felipe@gmail.com', 3),
+('Valentina', 'Gil', 'vale@gmail.com', 4),
+('Sebastian', 'Rios', 'sebastian@gmail.com', 5);
+
+CREATE TABLE AGENDA_DISENADOR (
+    id_horario INT PRIMARY KEY IDENTITY(1,1),
+    id_disenador INT NOT NULL,
+    dia_semana VARCHAR(20) NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    CONSTRAINT FK_horario_disenador
+    FOREIGN KEY (id_disenador)
+    REFERENCES DISENADOR(id_disenador)
+);
+INSERT INTO AGENDA_DISENADOR(id_disenador, dia_semana, hora_inicio, hora_fin) VALUES
+-- DISEÑADOR 1
+(1, 'Monday',    '08:00', '17:00'),
+(1, 'Tuesday',   '08:00', '17:00'),
+(1, 'Wednesday', '08:00', '17:00'),
+(1, 'Thursday',  '08:00', '17:00'),
+(1, 'Friday',    '08:00', '17:00'),
+(1, 'Saturday',  '08:00', '12:00'),
+
+-- DISEÑADOR 2
+(2, 'Monday',    '09:00', '18:00'),
+(2, 'Tuesday',   '09:00', '18:00'),
+(2, 'Wednesday', '09:00', '18:00'),
+(2, 'Thursday',  '09:00', '18:00'),
+(2, 'Friday',    '09:00', '18:00'),
+(2, 'Saturday',  '09:00', '13:00'),
+
+-- DISEÑADOR 3
+(3, 'Monday',    '07:00', '16:00'),
+(3, 'Tuesday',   '07:00', '16:00'),
+(3, 'Wednesday', '07:00', '16:00'),
+(3, 'Thursday',  '07:00', '16:00'),
+(3, 'Friday',    '07:00', '16:00'),
+(3, 'Saturday',  '08:00', '12:00'),
+
+-- DISEÑADOR 4
+(4, 'Monday',    '10:00', '19:00'),
+(4, 'Tuesday',   '10:00', '19:00'),
+(4, 'Wednesday', '10:00', '19:00'),
+(4, 'Thursday',  '10:00', '19:00'),
+(4, 'Friday',    '10:00', '19:00'),
+(4, 'Saturday',  '09:00', '14:00'),
+
+-- DISEÑADOR 5
+(5, 'Monday',    '08:30', '17:30'),
+(5, 'Tuesday',   '08:30', '17:30'),
+(5, 'Wednesday', '08:30', '17:30'),
+(5, 'Thursday',  '08:30', '17:30'),
+(5, 'Friday',    '08:30', '17:30'),
+(5, 'Saturday',  '08:00', '12:00');
 
 CREATE TABLE CITA (
     id_cita INT IDENTITY(1,1) PRIMARY KEY,
@@ -113,3 +178,70 @@ CREATE TABLE PQRS (
 	CONSTRAINT FK_pqrs_estado FOREIGN KEY (id_estado_pqrs) REFERENCES ESTADO_PQRS(id_estado_pqrs),
 	CONSTRAINT FK_pqrs_usuario FOREIGN KEY (documento) REFERENCES USUARIO(documento)
 );
+
+ CREATE PROCEDURE sp_agendar_cita
+ (
+     @fecha DATE,
+     @hora TIME,
+     @documento INT,
+     @id_sede INT,
+     @id_disenador INT )
+  AS
+  BEGIN
+ 
+     DECLARE @dia VARCHAR(20);
+ 
+     -- Obtener día de la semana
+     SET @dia = DATENAME(WEEKDAY, @fecha);
+
+     -- VALIDAR SI EL DISEÑADOR TRABAJA ESE DÍA Y HORA
+ 
+     IF NOT EXISTS (
+         SELECT 1
+         FROM AGENDA_DISENADOR
+         WHERE id_disenador = @id_disenador
+         AND dia_semana = @dia
+         AND @hora BETWEEN hora_inicio AND hora_fin
+     )
+     BEGIN
+         PRINT 'El diseñador no trabaja en ese horario';
+         RETURN;
+     END
+ 
+
+     -- VALIDAR SI YA TIENE UNA CITA
+
+     IF EXISTS (
+         SELECT 1
+         FROM CITA
+         WHERE fecha = @fecha
+         AND hora = @hora
+         AND id_disenador = @id_disenador
+         AND id_estado_cita <> 4
+     )
+     BEGIN
+         PRINT 'El diseñador ya tiene una cita';
+         RETURN;
+     END
+     -- INSERTAR CITA
+ 
+     INSERT INTO CITA
+     (
+        fecha,
+         hora,
+         documento,
+         id_sede,
+         id_disenador
+     )
+    VALUES (
+         @fecha,
+         @hora,
+         @documento,
+         @id_sede,
+         @id_disenador
+     );
+ 
+     PRINT 'Cita agendada correctamente';
+
+ END;
+ GO
