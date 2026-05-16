@@ -62,9 +62,7 @@ INSERT INTO SEDE(nombre, direccion, telefono) VALUES
 ('Sede Sur', 'Carrera 15 #40-20', '6042222222'),
 ('Sede Centro', 'Avenida 30 #12-10', '6043333333'),
 ('Sede Bello', 'Calle 45 #22-18', '6044444444'),
-('Sede Itagui', 'Carrera 50 #33-12', '6045555555'),
-('Sede Envigado', 'Calle 60 #19-11', '6046666666'),
-('Sede Laureles', 'Carrera 70 #44-15', '6047777777');
+('Sede Itagui', 'Carrera 50 #33-12', '6045555555');
 
 CREATE TABLE DISENADOR (
 	id_disenador INT PRIMARY KEY IDENTITY(1,1),
@@ -76,7 +74,9 @@ CREATE TABLE DISENADOR (
 );
 INSERT INTO DISENADOR(nombre, apellido, correo, id_sede) VALUES
 ('Daniel', 'Ruiz', 'daniel@gmail.com', 1),
+('David', 'Gómez', 'David@gmail.com', 1),
 ('Laura', 'Mora', 'laura@gmail.com', 2),
+('Dayana', 'Correa', 'Dayana@gmail.com', 2),
 ('Felipe', 'Castro', 'felipe@gmail.com', 3),
 ('Valentina', 'Gil', 'vale@gmail.com', 4),
 ('Sebastian', 'Rios', 'sebastian@gmail.com', 5);
@@ -92,7 +92,6 @@ CREATE TABLE AGENDA_DISENADOR (
     REFERENCES DISENADOR(id_disenador)
 );
 INSERT INTO AGENDA_DISENADOR(id_disenador, dia_semana, hora_inicio, hora_fin) VALUES
--- DISEÑADOR 1
 (1, 'Monday',    '08:00', '17:00'),
 (1, 'Tuesday',   '08:00', '17:00'),
 (1, 'Wednesday', '08:00', '17:00'),
@@ -100,7 +99,6 @@ INSERT INTO AGENDA_DISENADOR(id_disenador, dia_semana, hora_inicio, hora_fin) VA
 (1, 'Friday',    '08:00', '17:00'),
 (1, 'Saturday',  '08:00', '12:00'),
 
--- DISEÑADOR 2
 (2, 'Monday',    '09:00', '18:00'),
 (2, 'Tuesday',   '09:00', '18:00'),
 (2, 'Wednesday', '09:00', '18:00'),
@@ -108,7 +106,6 @@ INSERT INTO AGENDA_DISENADOR(id_disenador, dia_semana, hora_inicio, hora_fin) VA
 (2, 'Friday',    '09:00', '18:00'),
 (2, 'Saturday',  '09:00', '13:00'),
 
--- DISEÑADOR 3
 (3, 'Monday',    '07:00', '16:00'),
 (3, 'Tuesday',   '07:00', '16:00'),
 (3, 'Wednesday', '07:00', '16:00'),
@@ -116,7 +113,6 @@ INSERT INTO AGENDA_DISENADOR(id_disenador, dia_semana, hora_inicio, hora_fin) VA
 (3, 'Friday',    '07:00', '16:00'),
 (3, 'Saturday',  '08:00', '12:00'),
 
--- DISEÑADOR 4
 (4, 'Monday',    '10:00', '19:00'),
 (4, 'Tuesday',   '10:00', '19:00'),
 (4, 'Wednesday', '10:00', '19:00'),
@@ -124,13 +120,26 @@ INSERT INTO AGENDA_DISENADOR(id_disenador, dia_semana, hora_inicio, hora_fin) VA
 (4, 'Friday',    '10:00', '19:00'),
 (4, 'Saturday',  '09:00', '14:00'),
 
--- DISEÑADOR 5
 (5, 'Monday',    '08:30', '17:30'),
 (5, 'Tuesday',   '08:30', '17:30'),
 (5, 'Wednesday', '08:30', '17:30'),
 (5, 'Thursday',  '08:30', '17:30'),
 (5, 'Friday',    '08:30', '17:30'),
-(5, 'Saturday',  '08:00', '12:00');
+(5, 'Saturday',  '08:00', '12:00'),
+
+(6, 'Monday',    '10:30', '17:30'),
+(6, 'Tuesday',   '10:30', '17:30'),
+(6, 'Wednesday', '10:30', '17:30'),
+(6, 'Thursday',  '10:30', '17:30'),
+(6, 'Friday',    '10:30', '17:30'),
+(6, 'Saturday',  '08:00', '12:00'),
+
+(7, 'Monday',    '10:30', '17:30'),
+(7, 'Tuesday',   '10:30', '17:30'),
+(7, 'Wednesday', '10:30', '17:30'),
+(7, 'Thursday',  '10:30', '17:30'),
+(7, 'Friday',    '10:30', '17:30'),
+(7, 'Saturday',  '08:00', '12:00');
 
 CREATE TABLE CITA (
     id_cita INT IDENTITY(1,1) PRIMARY KEY,
@@ -183,7 +192,7 @@ CREATE TABLE PQRS (
  (
      @fecha DATE,
      @hora TIME,
-     @documento INT,
+     @documento VARCHAR(20),
      @id_sede INT,
      @id_disenador INT )
   AS
@@ -245,3 +254,4 @@ CREATE TABLE PQRS (
 
  END;
  GO
+ 
