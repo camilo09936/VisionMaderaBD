@@ -526,70 +526,80 @@ BEGIN
 	END CATCH
 END;
 --EJEMPLO DE USO--El usuario debe existir, valida que exista y actualiza.
+CREATE PROCEDURE sp_agendar_cita
+(
+    @fecha DATE,
+    @id_bloque INT,
+    @documento VARCHAR(20),
+    @id_sede INT,
+    @id_disenador INT
+)
+AS
+BEGIN
+    DECLARE @dia VARCHAR(20);
+    SET @dia = DATENAME(WEEKDAY, @fecha);
 
- CREATE PROCEDURE sp_agendar_cita
- (
-     @fecha DATE,
-     @hora TIME,
-     @documento VARCHAR(20),
-     @id_sede INT,
-     @id_disenador INT )
-  AS
-  BEGIN
- 
-     DECLARE @dia VARCHAR(20);
- 
-     -- Obtener día de la semana
-     SET @dia = DATENAME(WEEKDAY, @fecha);
+    -- VALIDAR USUARIO
 
-     -- VALIDAR SI EL DISEÑADOR TRABAJA ESE DÍA Y HORA
- 
-     IF NOT EXISTS (
-         SELECT 1
-         FROM AGENDA_DISENADOR
-         WHERE id_disenador = @id_disenador
-         AND dia_semana = @dia
-         AND @hora BETWEEN hora_inicio AND hora_fin
-     )
-     BEGIN
-         PRINT 'El diseñador no trabaja en ese horario';
-         RETURN;
-     END
- 
+    IF NOT EXISTS (
+        SELECT 1
+        FROM USUARIO
+        WHERE documento = @documento
+    )
+    BEGIN
+        PRINT 'El usuario no existe';
+        RETURN;
+    END
 
-     -- VALIDAR SI YA TIENE UNA CITA
+    -- VALIDAR SI EL DISEÑADOR TRABAJA ESE BLOQUE
 
-     IF EXISTS (
-         SELECT 1
-         FROM CITA
-         WHERE fecha = @fecha
-         AND hora = @hora
-         AND id_disenador = @id_disenador
-         AND id_estado_cita <> 4
-     )
-     BEGIN
-         PRINT 'El diseñador ya tiene una cita';
-         RETURN;
-     END
-     -- INSERTAR CITA
- 
-     INSERT INTO CITA
-     (
+    IF NOT EXISTS (
+        SELECT 1
+        FROM AGENDA_DISENADOR
+        WHERE id_disenador = @id_disenador
+        AND dia_semana = @dia
+        AND id_bloque = @id_bloque
+    )
+    BEGIN
+        PRINT 'El diseñador no trabaja en ese bloque';
+        RETURN;
+    END
+
+    -- VALIDAR SI EL BLOQUE YA ESTÁ OCUPADO
+
+    IF EXISTS (
+        SELECT 1
+        FROM CITA
+        WHERE fecha = @fecha
+        AND id_bloque = @id_bloque
+        AND id_disenador = @id_disenador
+        AND id_estado_cita <> 4
+    )
+    BEGIN
+        PRINT 'Ese bloque ya está ocupado';
+        RETURN;
+    END
+
+    -- INSERTAR CITA
+
+    INSERT INTO CITA
+    (
         fecha,
-         hora,
-         documento,
-         id_sede,
-         id_disenador
-     )
-    VALUES (
-         @fecha,
-         @hora,
-         @documento,
-         @id_sede,
-         @id_disenador
-     );
- 
-     PRINT 'Cita agendada correctamente';
+        id_bloque,
+        documento,
+        id_sede,
+        id_disenador
+    )
+    VALUES
+    (
+        @fecha,
+        @id_bloque,
+        @documento,
+        @id_sede,
+        @id_disenador
+    );
 
- END;
- GO
+    PRINT 'Cita agendada correctamente';
+
+END;
+GO
