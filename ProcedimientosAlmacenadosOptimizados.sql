@@ -277,7 +277,7 @@ END;
 GO
 
 -----------------------------------------------------------------------------------------------------
---Optimizacion SP #8 (Reporte Citas Por Sede )
+--Optimizacion SP #9 (Reporte Citas Por Sede )
 
 CREATE PROCEDURE sp_ReporteCitasSedes
 AS
