@@ -44,16 +44,16 @@ GO
 CREATE NONCLUSTERED INDEX IX_CITA_id_disenador_id_estado ON CITA (id_disenador, id_estado_cita);
 GO
 
---Optimizacion SP #2 (Calcular Comision Diseñadores segun citas realizadas)
+--Optimizacion SP #2 (Calcular Comision Diseï¿½adores segun citas realizadas)
 CREATE PROCEDURE sp_CalcularComisionDisenadores 
 AS
 BEGIN
 	SET NOCOUNT ON;
 	DECLARE @id_realizada INT = (SELECT id_estado_cita FROM ESTADO_CITA WHERE nombre = 'Realizada'); 
 	SELECT 
-		CONCAT('Diseñador: ', ISNULL(D.nombre, ''), ' ', ISNULL(D.apellido, ''), 
+		CONCAT('Diseï¿½ador: ', ISNULL(D.nombre, ''), ' ', ISNULL(D.apellido, ''), 
 		       ' --> Citas Realizadas: ', COUNT(C.id_cita), 
-		       ' --> Comisión Total: $', CAST(COUNT(C.id_cita) * 5000 AS VARCHAR)) AS ReporteComision
+		       ' --> Comisiï¿½n Total: $', CAST(COUNT(C.id_cita) * 5000 AS VARCHAR)) AS ReporteComision
 	FROM DISENADOR D 
 	LEFT JOIN CITA C ON D.id_disenador = C.id_disenador AND C.id_estado_cita = @id_realizada 
 	GROUP BY D.nombre, D.apellido, D.id_disenador;
@@ -81,20 +81,20 @@ BEGIN
 			END
 			IF EXISTS(SELECT 1 FROM CALIFICACION WHERE id_cita = @id_cita) 
 			BEGIN
-				PRINT 'La cita ya tiene calificación registrada.';
+				PRINT 'La cita ya tiene calificaciï¿½n registrada.';
 				ROLLBACK TRANSACTION;
 				RETURN;
 			END
 			INSERT INTO CALIFICACION (puntaje, comentario, fecha, id_cita)
 			VALUES (@puntaje, @comentario, GETDATE(), @id_cita);
 			SELECT @promedio = AVG(CAST(puntaje AS DECIMAL(5,2))) FROM CALIFICACION;
-			PRINT 'Calificación Registrada Correctamente.';
+			PRINT 'Calificaciï¿½n Registrada Correctamente.';
 			PRINT 'Promedio Actual de Todas las Calificaciones: ' + CAST(@promedio AS VARCHAR);
 		COMMIT TRANSACTION;
 	END TRY
 	BEGIN CATCH
 		ROLLBACK TRANSACTION;
-		PRINT 'Error al registrar la calificación: ' + ERROR_MESSAGE();
+		PRINT 'Error al registrar la calificaciï¿½n: ' + ERROR_MESSAGE();
 	END CATCH
 END;
 GO
@@ -138,7 +138,7 @@ BEGIN
 			END
 			IF NOT EXISTS(SELECT 1 FROM USUARIO WHERE documento = @documento) 
 			BEGIN
-				PRINT 'El usuario con documento ' + @documento + ' no está registrado';
+				PRINT 'El usuario con documento ' + @documento + ' no estï¿½ registrado';
 				ROLLBACK TRANSACTION;
 				RETURN;
 			END
@@ -155,3 +155,142 @@ END;
 GO
 
 -----------------------------------------------------------------------------------------------------
+--Optimizacion SP #6 (Agendar cita)
+CREATE PROCEDURE sp_AgendarCita
+    @fecha DATE,
+    @id_bloque INT,
+    @id_estado_cita INT,
+    @documento VARCHAR(20),
+    @id_sede INT,
+    @id_disenador INT
+AS
+BEGIN
+
+    SET NOCOUNT ON;
+    -- VALIDAR CONFLICTOS DEL CLIENTE
+    IF EXISTS (
+        SELECT 1
+        FROM CITA
+        WHERE fecha = @fecha
+        AND id_bloque = @id_bloque
+        AND documento = @documento
+    )
+    BEGIN
+        RAISERROR(
+            'El usuario ya tiene una cita en este horario.',
+            16,
+            1
+        );
+        RETURN;
+    END
+    -- VALIDAR DISPONIBILIDAD DEL DISEÃ‘ADOR
+    IF EXISTS (
+        SELECT 1
+        FROM CITA
+        WHERE fecha = @fecha
+        AND id_bloque = @id_bloque
+        AND id_disenador = @id_disenador
+    )
+    BEGIN
+        RAISERROR(
+            'El diseÃ±ador ya estÃ¡ ocupado.',
+            16,
+            1
+        );
+        RETURN;
+    END
+    INSERT INTO CITA(
+        fecha,
+        id_bloque,
+        id_estado_cita,
+        documento,
+        id_sede,
+        id_disenador
+    )
+    VALUES(
+        @fecha,
+        @id_bloque,
+        @id_estado_cita,
+        @documento,
+        @id_sede,
+        @id_disenador
+    );
+END;
+GO
+
+-----------------------------------------------------------------------------------------------------
+--Optimizacion SP #7 (Reagendar cita)
+
+CREATE PROCEDURE sp_ReagendarCita
+    @id_cita INT,
+    @nueva_fecha DATE,
+    @nuevo_id_bloque INT
+AS
+BEGIN
+
+    SET NOCOUNT ON;
+
+    -- Validar existencia rÃ¡pida
+    IF NOT EXISTS (
+        SELECT 1
+        FROM CITA
+        WHERE id_cita = @id_cita
+    )
+    BEGIN
+        RAISERROR('La cita no existe.',16,1);
+        RETURN;
+    END
+
+    -- ActualizaciÃ³n directa
+    UPDATE CITA
+    SET fecha = @nueva_fecha,
+        id_bloque = @nuevo_id_bloque
+    WHERE id_cita = @id_cita;
+
+END;
+GO
+
+-----------------------------------------------------------------------------------------------------
+--Optimizacion SP #8 (Actualizar Datos de Contacto)
+
+
+CREATE PROCEDURE sp_ActualizarContactoUsuario
+    @documento VARCHAR(20),
+    @nuevo_telefono VARCHAR(20),
+    @nuevo_correo VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE USUARIO
+    SET telefono = @nuevo_telefono,
+        correo = @nuevo_correo
+    WHERE documento = @documento;
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+    THROW 50004, 'Usuario no encontrado.',1;
+END
+
+PRINT 'Contacto actualizado.';
+END;
+GO
+
+-----------------------------------------------------------------------------------------------------
+--Optimizacion SP #8 (Reporte Citas Por Sede )
+
+CREATE PROCEDURE sp_ReporteCitasSedes
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        S.nombre AS sede,
+        COUNT(C.id_cita) AS total_citas
+    FROM SEDE S
+        LEFT JOIN CITA C
+        ON S.id_sede = C.id_sede
+    GROUP BY S.nombre
+    ORDER BY total_citas DESC;
+END;
+GO
